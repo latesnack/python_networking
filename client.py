@@ -1,3 +1,10 @@
+import random
+import string
+
+gen_file = open("string.txt", "w")
+string = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(1024)])
+gen_file.write(string)
+gen_file.close()
 
 from socket import *
 while 1:

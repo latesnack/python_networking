@@ -7,15 +7,7 @@ from socket import *
 # A function that will alter it's input integer 1/10 times,
 # and return the input unchanged 9/10 times
 
-def gremlin(input):
-    chance = random.random()
-    chance = int(chance*10)
-    if chance == 5:
-        return input + 4
-    else:
-        return input
-        
-        
+
 class Packet:
    'Class that defines a packet'
    #empCount = 0

@@ -2,10 +2,10 @@ import random
 import string
 import CRC
 import pickle
+import struct
 from socket import *
 
-# A function that will alter it's input integer 1/10 times,
-# and return the input unchanged 9/10 times
+
 
 
 class Packet:
@@ -16,9 +16,10 @@ class Packet:
       self.sequence_number = sequence_number
       self.payload = payload
       self.checksum = CRC.crc(str(payload))
-      self.packet_string = str(self.sequence_number) + str(self.payload) + str(self.checksum)
+      #self.packet_string = str(self.sequence_number) + str(self.payload) + str(self.checksum)
+      self.packet_struct = struct.pack("!i8si", self.sequence_number, self.payload, self.checksum)
    def displayPacket(self):
-     print (self.packet_string)
+     print (self.packet_struct)
      print("\n")
     
 
@@ -44,13 +45,11 @@ with open("string.txt", "rb") as f:  #While file is open
         payload = f.read(8)          #Read in 8 bytes from file
         if not payload:            
             break  
-        newPacket = Packet(sequence_no, payload) 
-        #pickle the packet into a byte array
-        pickled_packet = pickle.dumps(newPacket)
+        newPacket = Packet(sequence_no, payload)
         #save the packet in case in needs to be resent
-        stored_packets.append(pickled_packet)
+        stored_packets.append(newPacket)
         #send the packet
-        clientSocket.send(pickled_packet)
+        clientSocket.send(newPacket.packet_struct)
         acknowledged = 0
         while acknowledged != 1:
             #Receive reply from server
@@ -60,16 +59,18 @@ with open("string.txt", "rb") as f:  #While file is open
                 acknowledged = 1
             #Otherwise, the reply is the sequence number of a packet to be resent
             else:
-                ack_int = int(ack_string.decode())
-                print(ack_int)
-                clientSocket.send(stored_packets[ack_int])
+                print("The acknowledgement string is: ")
+                print(ack_string)
+                blah = ack_string.decode("utf-8")
+                print("SENDING BACK: ")
+                print(stored_packets[int(blah)].sequence_number)
+                clientSocket.send(stored_packets[int(blah)].packet_struct)
         print("acknowledge received \n")
         Packet.displayPacket(newPacket)
         sequence_no+=1
         
 #Send a special packet that symbolises the end of the file        
-end_frame_packet = Packet(-1, 0)
-end_pickled = pickle.dumps(end_frame_packet)
-clientSocket.send(end_pickled)
+end_frame_packet = Packet(-1, b"11111111111111")
+clientSocket.send(end_frame_packet.packet_struct)
 #Close the socket
 clientSocket.close()

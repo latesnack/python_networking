@@ -1,5 +1,6 @@
 import pickle
 import random
+import struct
 import CRC
 from socket import *
 
@@ -15,14 +16,16 @@ def gremlin(input):
     
 class Packet:
    'Class that defines a packet'
+   #empCount = 0
 
    def __init__(self, sequence_number, payload):
       self.sequence_number = sequence_number
       self.payload = payload
-      self.checksum = crc(str(payload))
-      self.packet_string = str(self.sequence_number) + str(self.payload) + str(self.checksum)
+      self.checksum = CRC.crc(str(payload))
+      #self.packet_string = str(self.sequence_number) + str(self.payload) + str(self.checksum)
+      self.packet_struct = struct.pack("!i8si", self.sequence_number, self.payload, self.checksum)
    def displayPacket(self):
-     print (self.packet_string)
+     print (self.packet_struct)
      print("\n")
     
 
@@ -39,27 +42,33 @@ while isEnded == 0:
      
     #listen for incoming data
     packet = connectionSocket.recv(1024)
-    #load bytes object back into Packet object using pickle
-    recv_packet = pickle.loads(packet)
+
+    recv_string = struct.unpack("!i8si", packet) 
+    print("STRUCT RECEIVED: ")
+    print(recv_string)
     #Apply gremlin function to possibly mess up sequence number
-    recv_packet.sequence_number = gremlin(recv_packet.sequence_number)  
-    #Print the string of the entire packet
-    Packet.displayPacket(recv_packet)
+    recv_seq = recv_string[0]
+    
     #check the checksum
-    checksum = CRC.crc(str(recv_packet.payload))
+    checksum = CRC.crc(str(recv_string[1]))
+    
     #check if the packet is in sequence, and if the checksum is valid
-    if (recv_packet.sequence_number != (last_sequence + 1)) or (checksum != recv_packet.checksum):
+    if (recv_seq != (last_sequence + 1)) or (checksum != recv_string[2]):
         #send back the index of the missing packet if not
         connectionSocket.send(str(last_sequence + 1).encode())
+        
+        print("Requested resend of: ")
+        print(str(last_sequence + 1).encode())
         
     #if the sequence is correct...
     else:
         #send an acknowledgement
         connectionSocket.send(b"666")
         print("Acknowledgement sent \n")
-        if recv_packet.sequence_number == -1:
-            isEnded = 1
-        
+        last_sequence += 1
+    if recv_string[0] == -1:
+        isEnded = 1
+
         
 connectionSocket.close()    
     

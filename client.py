@@ -1,22 +1,24 @@
+#Iarla Scaife, 14314716, 2017
+#JS Engineering: Computer Networks
+#Datalink Protocol
+
 import random
 import string
 import CRC
-import pickle
 import struct
 from socket import *
 
-
-
+#This class defines a packet. 
+#Each packet has a sequence number, payload and checksum.
+#It features a "packet_struct" item which is a C struct that is used to transmit the packet.
 
 class Packet:
    'Class that defines a packet'
-   #empCount = 0
 
    def __init__(self, sequence_number, payload):
       self.sequence_number = sequence_number
       self.payload = payload
       self.checksum = CRC.crc(str(payload))
-      #self.packet_string = str(self.sequence_number) + str(self.payload) + str(self.checksum)
       self.packet_struct = struct.pack("!i8si", self.sequence_number, self.payload, self.checksum)
    def displayPacket(self):
      print (self.packet_struct)
@@ -31,7 +33,7 @@ gen_file.write(string)
 gen_file.close()
 
 
-#Make an array to store packet
+#Make an array to store packets, in case any need to be resent
 stored_packets = []
 
 sequence_no = 0
@@ -39,34 +41,36 @@ serverName = 'localhost'
 serverPort = 12000
 clientSocket = socket(AF_INET, SOCK_STREAM)
 clientSocket.connect((serverName,serverPort))
-    
-with open("string.txt", "rb") as f:  #While file is open
+
+ #While file is open   
+with open("string.txt", "rb") as f:  
     while True:
-        payload = f.read(8)          #Read in 8 bytes from file
+        #Read in 8 bytes from file (payload)
+        payload = f.read(8)          
         if not payload:            
             break  
+        #Create a packet out of the 8 bit payload
         newPacket = Packet(sequence_no, payload)
         #save the packet in case in needs to be resent
         stored_packets.append(newPacket)
         #send the packet
         clientSocket.send(newPacket.packet_struct)
         acknowledged = 0
+        
         while acknowledged != 1:
             #Receive reply from server
             ack_string = clientSocket.recv(1024)
-            #If the reply is the preset acknowledgement string, the packet has been acknowledged
-            if ack_string == b"666":
+            #If the reply is the predecided acknowledgement string, the packet has been acknowledged
+            if ack_string == b"66666666":
                 acknowledged = 1
             #Otherwise, the reply is the sequence number of a packet to be resent
             else:
-                print("The acknowledgement string is: ")
-                print(ack_string)
-                blah = ack_string.decode("utf-8")
+                index = ack_string.decode("utf-8")
                 print("SENDING BACK: ")
-                print(stored_packets[int(blah)].sequence_number)
-                clientSocket.send(stored_packets[int(blah)].packet_struct)
+                print(stored_packets[int(index)].sequence_number)
+                #resend the packet
+                clientSocket.send(stored_packets[int(index)].packet_struct)
         print("acknowledge received \n")
-        Packet.displayPacket(newPacket)
         sequence_no+=1
         
 #Send a special packet that symbolises the end of the file        
